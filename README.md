@@ -32,7 +32,7 @@ Each output is:
 - resized to 1080×1080 pixels; and
 - saved as a maximum-quality baseline JPEG.
 
-The model uses visible content and source Title, Description, Extended Description, keywords, creator, copyright, location, and GPS metadata when available. It generates a truthful Instagram caption and relevant discovery hashtags, then writes the combined text to the IPTC Core `ExtDescrAccessibility` XMP property shown by compatible software as **Extended Description (Accessibility)**. Other inherited metadata is preserved by Photoshop's Save As operation.
+The model uses visible content and source Title, Description, Extended Description, keywords, creator, copyright, location, and GPS metadata when available. It generates a truthful Instagram caption and relevant discovery hashtags, then replaces the output JPEG's standard **Description** (`dc:description`, exposed by Photoshop as Caption/Description) with the combined text. The IPTC **Extended Description (Accessibility)** property (`Iptc4xmpCore:ExtDescrAccessibility`) is removed so that field is blank. Other inherited metadata is preserved by Photoshop's Save As operation.
 
 No system can guarantee that a post will trend. The workflow directs the model to favor current, specific, relevant hashtags and avoid unrelated or spam-like tags.
 

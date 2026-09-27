@@ -158,7 +158,9 @@ async function prepareEntry(pluginDirectory: string, job: Job, signal: AbortSign
     metadata: metadataFile,
   }, signal)
   await stat(entry.preview)
-  const fields = (await readFile(metadataFile, "utf8")).trim().split("\t")
+  // Preserve leading empty fields (for example, an empty Title). trim() would
+  // remove the first tab and shift every following metadata value one column.
+  const fields = (await readFile(metadataFile, "utf8")).replace(/[\r\n]+$/, "").split("\t")
   entry.metadata = {
     title: decodeField(fields[0]),
     description: decodeField(fields[1]),
@@ -193,7 +195,7 @@ async function queueCurrent(ctx: any, job: Job, message: string) {
   await ctx.session.prompt({
     sessionID: job.sessionID,
     delivery: "queue",
-    text: `${message}\nJob: ${job.id}\nImage ${job.index + 1} of ${job.entries.length}: ${path.basename(entry.input)}\n\nSource metadata:\n${metadataSummary(entry.metadata!)}\n\nInspect the attached pixels. Call instagram_pre_processor_apply once with an image-specific square composition, straightening, and restrained Photoshop exposure/color/contrast/Levels/Curves/tone adjustments. Level a genuinely tilted horizon, subject, or architectural vertical, but preserve clearly intentional Dutch angles or purposeful skew by using 0 degrees. Create a truthful, engaging Instagram caption and research/select current relevant hashtags for strong discoverability; never promise virality or add unrelated trending tags. The final caption and hashtags are written to IPTC Extended Description (Accessibility).`,
+    text: `${message}\nJob: ${job.id}\nImage ${job.index + 1} of ${job.entries.length}: ${path.basename(entry.input)}\n\nSource metadata:\n${metadataSummary(entry.metadata!)}\n\nInspect the attached pixels. Call instagram_pre_processor_apply once with an image-specific square composition, straightening, and restrained Photoshop exposure/color/contrast/Levels/Curves/tone adjustments. Level a genuinely tilted horizon, subject, or architectural vertical, but preserve clearly intentional Dutch angles or purposeful skew by using 0 degrees. Create a truthful, engaging Instagram caption and research/select current relevant hashtags for strong discoverability; never promise virality or add unrelated trending tags. The final caption and hashtags replace the standard Metadata Description; Extended Description is cleared.`,
     files: [{ uri: pathToFileURL(entry.preview).href }],
   })
 }
@@ -342,7 +344,7 @@ export default definePlugin({
 
       editor.add({
         name: "apply",
-        description: "Apply AI-selected straightening, square crop, and Photoshop tonal/color finishing; write Instagram Extended Description metadata; and continue the batch.",
+        description: "Apply AI-selected straightening, square crop, and Photoshop tonal/color finishing; replace Metadata Description with the Instagram text, clear Extended Description, and continue the batch.",
         options: { namespace: "instagram_pre_processor", codemode: true },
         input: {
           type: "object",
@@ -355,14 +357,14 @@ export default definePlugin({
           if (!job) throw new Error("Unknown or completed Instagram job.")
           if (job.sessionID !== context.sessionID) throw new Error("This Instagram job belongs to another session.")
           const entry = job.entries[job.index]
-          const extendedDescription = instagramText(input.edit)
+          const description = instagramText(input.edit)
           await context.progress({ status: `Creating ${path.basename(entry.output)} (${job.index + 1}/${job.entries.length})` })
           await runPhotoshop(pluginDirectory, "process.jsx", {
             input: entry.input,
             output: entry.output,
             overwrite: job.overwrite,
             outputSize: 1080,
-            extendedDescription,
+            description,
             straightenDegrees: clamp(input.edit.straightenDegrees, 0, -45, 45),
             cropCenterX: clamp(input.edit.cropCenterX, 0.5, 0, 1),
             cropCenterY: clamp(input.edit.cropCenterY, 0.5, 0, 1),

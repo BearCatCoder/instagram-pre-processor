@@ -51,7 +51,13 @@
             executeAction(stringIDToTypeID("vibrance"), vibranceSettings, DialogModes.NO);
         }
         var saturation = integer(finish.saturation, 0, -30, 30);
-        if (saturation) doc.activeLayer.adjustHueSaturation(0, saturation, 0);
+        if (saturation) {
+            var hueSaturationSettings = new ActionDescriptor();
+            hueSaturationSettings.putInteger(charIDToTypeID("H   "), 0);
+            hueSaturationSettings.putInteger(charIDToTypeID("Strt"), saturation);
+            hueSaturationSettings.putInteger(charIDToTypeID("Lght"), 0);
+            executeAction(charIDToTypeID("HStr"), hueSaturationSettings, DialogModes.NO);
+        }
     }
 
     if (!RPP_CONFIG.overwrite && new File(RPP_CONFIG.output).exists) throw new Error("Instagram output already exists and overwrite is disabled.");
@@ -93,10 +99,16 @@
         if (ExternalObject.AdobeXMPScript === undefined) {
             ExternalObject.AdobeXMPScript = new ExternalObject("lib:AdobeXMPScript");
         }
+        // Accept the former config key as a bridge for an in-flight job that
+        // began before this plugin update was loaded.
+        var instagramDescription = String(RPP_CONFIG.description || RPP_CONFIG.extendedDescription || "");
+        var dc = "http://purl.org/dc/elements/1.1/";
         var core = "http://iptc.org/std/Iptc4xmpCore/1.0/xmlns/";
         var xmp = new XMPMeta(doc.xmpMetadata.rawData);
-        xmp.setLocalizedText(core, "ExtDescrAccessibility", "", "x-default", RPP_CONFIG.extendedDescription);
+        xmp.setLocalizedText(dc, "description", "", "x-default", instagramDescription);
+        xmp.deleteProperty(core, "ExtDescrAccessibility");
         doc.xmpMetadata.rawData = xmp.serialize();
+        doc.info.caption = instagramDescription;
 
         var options = new JPEGSaveOptions();
         options.quality = 12;
